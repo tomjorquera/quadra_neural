@@ -88,6 +88,28 @@ function generate(nn, base, iter) {
 }
 
 loadModel('default').then(nn => {
-  const x = 'obligations mises à la charge des opér';
-  generate(nn, x, 20).then(console.log);
+  const textArea = document.getElementById('user-input');
+  const output = document.getElementById('output');
+
+  function generateAndDisplay() {
+    let x = textArea.value;
+    let xlength = nn.model.inputTensors.input.tensor.shape[0];
+
+    if(x.length < xlength) {
+      // pad begin of string with ' ' if needed
+      x = new Array(xlength - x.length).fill(' ').join('') + x;
+    }
+
+    if(x.length > xlength) {
+      // only keep the xlength last characters
+      x = x.substring(x.length - xlength);
+    }
+
+    generate(nn, x, 20).then(y => {
+      output.innerHTML = y.substring(x.length - 20);
+    });
+  };
+
+  textArea.onkeyup=generateAndDisplay;
+
 }, console.error);
