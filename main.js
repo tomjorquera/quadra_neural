@@ -97,29 +97,66 @@ function generate(nn, base, iter) {
   });
 }
 
+function updateTextArea(el, text) {
+  const caretPos = el.selectionStart;
+  let textAreaTxt = el.value;
+  el.value = textAreaTxt.substring(0, caretPos) + text;
+  el.selectionStart = caretPos;
+  el.selectionEnd = caretPos;
+};
+
+function update(nn, input) {
+  let x = input.value.substring(0, input.selectionStart);
+  let xlength = nn.model.inputTensors.input.tensor.shape[0];
+
+  if(x.length < xlength) {
+    // pad begin of string with ' ' if needed
+    x = new Array(xlength - x.length).fill(' ').join('') + x;
+  }
+
+  if(x.length > xlength) {
+    // only keep the xlength last characters
+    x = x.substring(x.length - xlength);
+  }
+
+  generate(nn, x, 20).then(y => {
+    updateTextArea(input, y.substring(x.length - 20));
+  });
+
+}
+
+function getNewCursorPos(textArea, startPos) {
+  const txt = textArea.value;
+  const nextSpace = txt.indexOf(' ', startPos);
+  if(nextSpace > 0) {
+    if(nextSpace == textArea.selectionStart) {
+      // we are right before the space, jump over to end of next word
+      return getNewCursorPos(textArea, nextSpace + 1);
+    } else {
+      // move cursor right before space
+      return nextSpace;
+    }
+  } else {
+    // we are at the last word, go at the end of text
+    return txt.length;
+  }
+}
+
 loadModel('default').then(nn => {
-  const textArea = document.getElementById('user-input');
-  const output = document.getElementById('output');
+  const input = document.getElementById('user-input');
 
-  function generateAndDisplay() {
-    let x = textArea.value;
-    let xlength = nn.model.inputTensors.input.tensor.shape[0];
-
-    if(x.length < xlength) {
-      // pad begin of string with ' ' if needed
-      x = new Array(xlength - x.length).fill(' ').join('') + x;
+  input.onkeydown = e => {
+    if(e.keyCode === 9) {
+      // tab pressed, update cursor position
+      input.selectionStart = getNewCursorPos(input, input.selectionStart);
+      e.preventDefault();
     }
-
-    if(x.length > xlength) {
-      // only keep the xlength last characters
-      x = x.substring(x.length - xlength);
-    }
-
-    generate(nn, x, 20).then(y => {
-      output.innerHTML = y.substring(x.length - 20);
-    });
   };
 
-  textArea.onkeyup=generateAndDisplay;
+  input.onkeyup = e => {
+    if(e.keyCode !== 9) {
+      update(nn, input);
+    }
+  };
 
 }, console.error);
