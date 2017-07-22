@@ -145,18 +145,22 @@ function getNewCursorPos(textArea, startPos) {
 loadModel('default').then(nn => {
   const input = document.getElementById('user-input');
 
+  let userEdit = false;
+
   input.onkeydown = e => {
     if(e.keyCode === 9) {
       // tab pressed, update cursor position
       input.selectionStart = getNewCursorPos(input, input.selectionStart);
       e.preventDefault();
     }
+    userEdit = true;
   };
 
-  input.onkeyup = e => {
-    if(e.keyCode !== 9) {
+  setInterval(() => {
+    if(userEdit) {
       update(nn, input);
     }
-  };
+    userEdit = false;
+  }, 100);
 
 }, console.error);
