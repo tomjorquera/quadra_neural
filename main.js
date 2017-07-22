@@ -56,17 +56,27 @@ function loadModel(model_name) {
                                      return res;
                                    })))
                }),
-               decode: d => {
-                 // find max value
-                 let max = 0;
-                 let max_i = 0;
-                 for (let i = 0; i < d.length; i++) {
-                   if (d[i] > max) {
-                     max_i = i;
-                     max = d[i];
+               decode: (d, temperature=1.0) => {
+                 d = Array.prototype.slice.call(new Float32Array(d.buffer));
+
+                 let probas = d;
+                 if(temperature != 1.0) {
+                   probas = math.divide(math.log(probas), temperature);
+                   probas = math.exp(probas);
+                 }
+                 probas = math.divide(probas, math.sum(probas));
+
+                 const r = Math.random();
+
+                 let acc = 0;
+                 let selected = 0;
+                 for (let i = 0; i < probas.length && acc < r; i++) {
+                   acc += probas[i];
+                   if (acc >= r) {
+                     selected = i;
                    }
                  }
-                 return decode_dict[max_i];
+                 return decode_dict[selected];
                }
              };
     });
