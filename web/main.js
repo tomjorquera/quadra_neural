@@ -24,8 +24,8 @@ function loadModel(model_name) {
   const model = new KerasJS.Model({
     filepaths: {
       model: 'assets/models/' + model_name + '/model.json',
-      weights: 'assets/models/' + model_name + '/weights.buf',
-      metadata: 'assets/models/' + model_name + '/metadata.json'
+      weights: 'assets/models/' + model_name + '/model_weights.buf',
+      metadata: 'assets/models/' + model_name + '/model_metadata.json'
     },
     gpu: true
   });
