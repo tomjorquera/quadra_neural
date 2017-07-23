@@ -40,22 +40,33 @@ function loadModel(model_name) {
         decode_dict[encode_dict[key]] = key;
       }
 
+      const input_layer =  {
+        name: model.data.model.config.input_layers[0][0],
+        shape: model.modelLayersMap.get(model.data.model.config.input_layers[0][0]).shape
+      };
+      const output_layer = {
+        name: model.data.model.config.output_layers[0][0]
+      };
+
       return { model,
+               input_layer,
+               output_layer,
                encode_dict,
                decode_dict,
-               encode: e => ({
-                 'input': new Float32Array(
+               encode: e => {
+                 const res = {};
+                 res[input_layer.name] = new Float32Array(
                    [].concat.apply([],
-                                   e.split('')
-                                   .map(t => {
+                                   e.split('').map(t => {
                                      const code = encode_dict[t];
                                      const res = new Array(Object
                                                            .keys(encode_dict)
-                                                           .length).fill(0);
+                                                           .length + 1).fill(0);
                                      res[code] = 1;
                                      return res;
-                                   })))
-               }),
+                                   })));
+                 return res;
+               },
                decode: (d, temperature=1.0) => {
                  d = Array.prototype.slice.call(new Float32Array(d.buffer));
 
@@ -90,7 +101,7 @@ function generate(nn, base, iter, temp) {
       const res = nn.model.predict(nn.encode(base)).then(
         res => {
           base = base.substr(1);
-          base = base + nn.decode(res.output, temp);
+          base = base + nn.decode(res[nn.output_layer.name], temp);
           generate(nn, base, iter - 1).then(resolve, reject);
         }, reject);
     }
@@ -153,7 +164,7 @@ loadModel('default').then(nn => {
 
     if(input.value.length - input.selectionStart < MIN_GEN) {
       let x = input.value;
-      let xlength = nn.model.inputTensors.input.tensor.shape[0];
+      let xlength = nn.input_layer.shape[0];
 
       if(x.length < xlength) {
         // pad begin of string with ' ' if needed
