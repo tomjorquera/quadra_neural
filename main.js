@@ -102,34 +102,6 @@ function complete(nn, text, nbChars, temp=1.0) {
     .then(y => y.substring(text.length - nbChars));
 }
 
-function updateTextArea(el, text) {
-  const caretPos = el.selectionStart;
-  let textAreaTxt = el.value;
-  el.value = textAreaTxt.substring(0, caretPos) + text;
-  el.selectionStart = caretPos;
-  el.selectionEnd = caretPos;
-};
-
-function update(nn, input) {
-  let x = input.value.substring(0, input.selectionStart);
-  let xlength = nn.model.inputTensors.input.tensor.shape[0];
-
-  if(x.length < xlength) {
-    // pad begin of string with ' ' if needed
-    x = new Array(xlength - x.length).fill(' ').join('') + x;
-  }
-
-  if(x.length > xlength) {
-    // only keep the xlength last characters
-    x = x.substring(x.length - xlength);
-  }
-
-  complete(nn, x, 20, 0.2).then(y => {
-    updateTextArea(input, y);
-  });
-
-}
-
 function getNewCursorPos(textArea, startPos) {
   const txt = textArea.value;
   const nextSpace = txt.indexOf(' ', startPos);
@@ -157,15 +129,47 @@ loadModel('default').then(nn => {
       // tab pressed, update cursor position
       input.selectionStart = getNewCursorPos(input, input.selectionStart);
       e.preventDefault();
+    } else if (input.value[input.selectionStart] === e.key){
+      // if the user is typing the next predicted char, just move the cursor
+      input.selectionStart += 1;
+      e.preventDefault();
+    } else {
+      // text updated, remove current prediction
+      input.value = input.value.substring(0, input.selectionStart);
     }
-    userEdit = true;
   };
 
-  setInterval(() => {
-    if(userEdit) {
-      update(nn, input);
+  function checkForUpdate() {
+    const MIN_GEN = 40;
+
+    if(input.value.length - input.selectionStart < MIN_GEN) {
+      let x = input.value;
+      let xlength = nn.model.inputTensors.input.tensor.shape[0];
+
+      if(x.length < xlength) {
+        // pad begin of string with ' ' if needed
+        x = new Array(xlength - x.length).fill(' ').join('') + x;
+      }
+
+      if(x.length > xlength) {
+        // only keep the xlength last characters
+        x = x.substring(x.length - xlength);
+      }
+
+      complete(nn, x, 1, 0.2).then(text => {
+        const caretPos = input.selectionStart;
+
+        input.value = input.value + text;
+
+        //restore caret position
+        input.selectionStart = caretPos;
+        input.selectionEnd = caretPos;
+      });
     }
-    userEdit = false;
+  }
+
+  setInterval(() => {
+    checkForUpdate();
   }, 100);
 
 }, console.error);
