@@ -121,6 +121,15 @@ function getNewCursorPos(textArea, startPos) {
 
 loadModel('default').then(nn => {
   const input = document.getElementById('user-input');
+  const tempSlider = document.getElementById('temp-slider');
+  const tempDisplay = document.getElementById('temp-display');
+  tempDisplay.textContent = tempSlider.value;
+
+  tempSlider.onchange = e => {
+    // when slider change, update the displayed value and reset preds
+    tempDisplay.textContent = tempSlider.value;
+    input.value = input.value.substring(0, input.selectionStart);
+  };
 
   let userEdit = false;
 
@@ -156,7 +165,10 @@ loadModel('default').then(nn => {
         x = x.substring(x.length - xlength);
       }
 
-      complete(nn, x, 1, 0.2).then(text => {
+      // get drunkness (aka temperature)
+      const temperature = tempSlider.value;
+
+      complete(nn, x, 1, temperature).then(text => {
         const caretPos = input.selectionStart;
 
         input.value = input.value + text;
