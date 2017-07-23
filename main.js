@@ -82,7 +82,7 @@ function loadModel(model_name) {
     });
 };
 
-function generate(nn, base, iter) {
+function generate(nn, base, iter, temp) {
   return new Promise((resolve, reject) => {
     if (iter <= 0) {
       resolve(base);
@@ -90,11 +90,16 @@ function generate(nn, base, iter) {
       const res = nn.model.predict(nn.encode(base)).then(
         res => {
           base = base.substr(1);
-          base = base + nn.decode(res.output);
+          base = base + nn.decode(res.output, temp);
           generate(nn, base, iter - 1).then(resolve, reject);
         }, reject);
     }
   });
+}
+
+function complete(nn, text, nbChars, temp=1.0) {
+  return generate(nn, text, nbChars, temp)
+    .then(y => y.substring(text.length - nbChars));
 }
 
 function updateTextArea(el, text) {
@@ -119,8 +124,8 @@ function update(nn, input) {
     x = x.substring(x.length - xlength);
   }
 
-  generate(nn, x, 20).then(y => {
-    updateTextArea(input, y.substring(x.length - 20));
+  complete(nn, x, 20, 0.2).then(y => {
+    updateTextArea(input, y);
   });
 
 }
